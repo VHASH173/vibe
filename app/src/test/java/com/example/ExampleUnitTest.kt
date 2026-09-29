@@ -1,0 +1,65 @@
+package com.example
+
+import com.example.data.supabase.SupabaseEdgeFunctions
+import com.example.model.GiftCatalog
+import com.example.model.LegalContent
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class ExampleUnitTest {
+    @Test
+    fun testFairMonetizationSplit_75_25() {
+        val rocket = GiftCatalog.allGifts.first { it.id == "gift_rocket" }
+        assertEquals(1000, rocket.coinCost)
+        assertEquals(10.00, rocket.usdValue, 0.001)
+
+        val split = SupabaseEdgeFunctions.calculateSplit(rocket)
+        assertTrue(split.success)
+        assertEquals(750, split.creatorCoins)
+        assertEquals(250, split.platformCoins)
+        assertEquals(7.50, split.creatorUsd, 0.001)
+        assertEquals(2.50, split.platformUsd, 0.001)
+    }
+
+    @Test
+    fun testGalaxyDragon_75_25() {
+        val dragon = GiftCatalog.allGifts.first { it.id == "gift_dragon" }
+        assertEquals(5000, dragon.coinCost)
+        assertEquals(50.00, dragon.usdValue, 0.001)
+
+        val split = SupabaseEdgeFunctions.calculateSplit(dragon)
+        assertEquals(3750, split.creatorCoins)
+        assertEquals(1250, split.platformCoins)
+        assertEquals(37.50, split.creatorUsd, 0.001)
+        assertEquals(12.50, split.platformUsd, 0.001)
+    }
+
+    @Test
+    fun testLegalConsentAuditPayload() {
+        val email = "streamer@vibestream.live"
+        val username = "@alex_stream"
+        val version = LegalContent.TERMS_VERSION
+        val timestamp = System.currentTimeMillis()
+
+        val payload = SupabaseEdgeFunctions.RegisterAuditPayload(
+            email = email,
+            username = username,
+            termsAcceptedVersion = version,
+            termsAcceptedTimestamp = timestamp
+        )
+
+        assertEquals("streamer@vibestream.live", payload.email)
+        assertEquals("@alex_stream", payload.username)
+        assertEquals("v1.0", payload.termsAcceptedVersion)
+        assertTrue(payload.termsAcceptedTimestamp > 0)
+    }
+
+    @Test
+    fun testFaqContentNotEmpty() {
+        assertTrue(LegalContent.FAQ_ITEMS.isNotEmpty())
+        assertTrue(LegalContent.TERMS_AND_CONDITIONS.contains("75%"))
+        assertTrue(LegalContent.PRIVACY_POLICY.contains("GDPR"))
+    }
+}

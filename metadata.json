@@ -1,0 +1,6 @@
+{
+  "name": "VibeStream",
+  "description": "Live streaming platform with real-time AR filters, interactive gifts, and creator-first 75/25 monetization.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

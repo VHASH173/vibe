@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Live Pulse Rings -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M33,40 C30,48 30,60 33,68" />
+    <path
+        android:strokeColor="#00F5D4"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M25,32 C20,44 20,64 25,76" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M75,40 C78,48 78,60 75,68" />
+    <path
+        android:strokeColor="#00F5D4"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M83,32 C88,44 88,64 83,76" />
+
+    <!-- Center Play/Stream Icon -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M44,38 L68,54 L44,70 Z" />
+
+    <!-- Live indicator badge -->
+    <path
+        android:fillColor="#FF0055"
+        android:pathData="M66,35 A5,5 0 1,1 66,35.01" />
+</vector>
