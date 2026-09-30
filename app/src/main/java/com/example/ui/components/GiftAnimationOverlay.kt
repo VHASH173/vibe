@@ -1,6 +1,5 @@
 package com.example.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -10,23 +9,15 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -41,6 +32,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,11 +40,8 @@ import com.example.model.Gift
 import com.example.model.GiftAnimationType
 import com.example.model.WebmAssetMapper
 import com.example.ui.theme.VibeAccentPurple
-import com.example.ui.theme.VibeCommissionBlue
-import com.example.ui.theme.VibePrimaryNeon
+import com.example.ui.theme.VibeOrangeHot
 import com.example.ui.theme.VibeSecondaryPink
-import com.example.ui.theme.VibeSuccessGreen
-import com.example.ui.theme.VibeSurface
 import com.example.ui.theme.VibeYellowGold
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
@@ -64,6 +53,10 @@ data class ActiveGiftAnimation(
     val timestamp: Long = System.currentTimeMillis()
 )
 
+/**
+ * Overlay de animación cinematográfica de Regalos en Vivo estilo TikTok Live limpio y sin sobrecargas.
+ * Reproduce el video WebM transparente en pantalla completa junto con la figura animada de impacto en la parte inferior.
+ */
 @Composable
 fun GiftAnimationOverlay(
     activeGift: ActiveGiftAnimation?,
@@ -73,273 +66,145 @@ fun GiftAnimationOverlay(
     if (activeGift == null) return
 
     val gift = activeGift.gift
-    val rocketProgress = remember { Animatable(0f) }
-    val dragonProgress = remember { Animatable(0f) }
-    val scaleAnim = remember { Animatable(0.2f) }
-
-    // Mapeo automático de asset WebM transparente con canal alfa (ExoPlayer Media3)
-    val webmAssetUri = remember(gift.animationType) {
-        WebmAssetMapper.getGiftWebmUri(gift.animationType)
-    }
-
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
+
+    // Animadores de entrada
+    val entranceScale = remember { Animatable(0f) }
+    val heroOffsetY = remember { Animatable(250f) }
+    val auraScale = remember { Animatable(0.5f) }
+
+    // Mapeo dinámico de asset WebM transparente con canal alfa (Media3)
+    val webmAssetUri = remember(gift.animationType, gift.coinCost, gift.name) {
+        WebmAssetMapper.getGiftWebmUriByValue(
+            diamond = gift.coinCost.toLong(),
+            name = gift.name
+        )
+    }
+
+    // Animación continua de impacto sutil
+    val infiniteTransition = rememberInfiniteTransition(label = "hero_pulse")
+    val heroPulse by infiniteTransition.animateFloat(
+        initialValue = 0.98f,
+        targetValue = 1.04f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(350, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "heroPulse"
+    )
+
+    val stompShake by infiniteTransition.animateFloat(
+        initialValue = -5f,
+        targetValue = 5f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(120, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "stompShake"
+    )
 
     LaunchedEffect(activeGift.timestamp) {
         // Pre-cargar assets en pool para prevenir caídas de FPS
         GiftEffectManager.prewarmAllAssets(context, scope)
 
-        // Disparo de vibración háptica sincronizada con el impacto visual del regalo premium
+        // Disparo de vibración háptica sincronizada
         GiftEffectManager.triggerGiftHaptic(context, gift)
 
-        scaleAnim.animateTo(
-            targetValue = 1f,
-            animationSpec = tween(400, easing = FastOutSlowInEasing)
-        )
-        if (gift.animationType == GiftAnimationType.VIBE_ROCKET) {
-            rocketProgress.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(2200, easing = FastOutSlowInEasing)
-            )
-        } else if (gift.animationType == GiftAnimationType.GALAXY_DRAGON) {
-            dragonProgress.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(2600, easing = LinearEasing)
-            )
-        }
-        delay(2200)
+        // Entrada explosiva
+        entranceScale.animateTo(1.15f, animationSpec = tween(240, easing = FastOutSlowInEasing))
+        entranceScale.animateTo(1.0f, animationSpec = tween(160, easing = FastOutSlowInEasing))
+        heroOffsetY.animateTo(0f, animationSpec = tween(300, easing = FastOutSlowInEasing))
+        auraScale.animateTo(1.3f, animationSpec = tween(500))
+
+        // Duración en pantalla limpia (5 segundos)
+        delay(5000)
+
+        // Salida
+        entranceScale.animateTo(0.1f, animationSpec = tween(250))
         onAnimationFinished()
     }
 
     Box(
-        modifier = modifier
-            .fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        // Capa de video WebM con canal alfa a pantalla completa (superpuesta sobre LiveKitVideoRenderer)
+        // 1. Capa de video WebM con canal alfa a pantalla completa
         TransparentWebmPlayer(
             assetUri = webmAssetUri,
             onPlaybackEnded = onAnimationFinished,
             modifier = Modifier.fillMaxSize()
         )
 
-        // Specific Gift Particle & Visual Effects
-        when (gift.animationType) {
-            GiftAnimationType.VIBE_ROCKET -> {
-                val rY = (1f - rocketProgress.value) * 1200f - 400f
-                Box(
-                    modifier = Modifier
-                        .offset { IntOffset(0, rY.roundToInt()) }
-                        .size(160.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "🚀",
-                        fontSize = 110.sp,
-                        modifier = Modifier
-                            .rotate(-25f)
-                            .shadow(24.dp, shape = CircleShape)
-                    )
-                }
-            }
-
-            GiftAnimationType.GALAXY_DRAGON -> {
-                val dX = (dragonProgress.value * 900f) - 450f
-                val dRot = (dragonProgress.value * 45f) - 20f
-                Box(
-                    modifier = Modifier
-                        .offset { IntOffset(dX.roundToInt(), 0) }
-                        .size(200.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "🐉",
-                        fontSize = 130.sp,
-                        modifier = Modifier.rotate(dRot)
-                    )
-                }
-            }
-
-            GiftAnimationType.GOLDEN_CROWN -> {
-                Box(
-                    modifier = Modifier
-                        .size(180.dp)
-                        .scale(scaleAnim.value),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(text = "👑", fontSize = 110.sp)
-                }
-            }
-
-            GiftAnimationType.ROSE_BURST -> {
-                Box(
-                    modifier = Modifier
-                        .size(150.dp)
-                        .scale(scaleAnim.value),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(text = "🌹", fontSize = 100.sp)
-                }
-            }
-
-            GiftAnimationType.NEON_SHADES -> {
-                Box(
-                    modifier = Modifier
-                        .size(160.dp)
-                        .scale(scaleAnim.value),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(text = "🕶️", fontSize = 105.sp)
-                }
-            }
-
-            GiftAnimationType.HOLO_VISOR -> {
-                Box(
-                    modifier = Modifier
-                        .size(160.dp)
-                        .scale(scaleAnim.value),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(text = "🥽", fontSize = 105.sp)
-                }
-            }
-
-            GiftAnimationType.AURA_FIRE -> {
-                Box(
-                    modifier = Modifier
-                        .size(170.dp)
-                        .scale(scaleAnim.value),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(text = "🔥", fontSize = 115.sp)
-                }
-            }
-
-            GiftAnimationType.NEON_MIC -> {
-                Box(
-                    modifier = Modifier
-                        .size(160.dp)
-                        .scale(scaleAnim.value),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(text = "🎙️", fontSize = 110.sp)
-                }
-            }
-
-            GiftAnimationType.CYBER_CAT -> {
-                Box(
-                    modifier = Modifier
-                        .size(170.dp)
-                        .scale(scaleAnim.value),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(text = "🐱", fontSize = 115.sp)
-                }
-            }
-
-            GiftAnimationType.DIAMOND_TROPHY -> {
-                Box(
-                    modifier = Modifier
-                        .size(180.dp)
-                        .scale(scaleAnim.value),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(text = "💎", fontSize = 120.sp)
-                }
-            }
-
-            GiftAnimationType.STARBURST_NOVA -> {
-                Box(
-                    modifier = Modifier
-                        .size(170.dp)
-                        .scale(scaleAnim.value),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(text = "⭐", fontSize = 115.sp)
-                }
-            }
-        }
-
-        // Top Gift Notification Banner with 75% creator share highlight
+        // 2. Aura de energía de impacto bajo el personaje
         Box(
             modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 80.dp, start = 16.dp, end = 16.dp)
-        ) {
-            Card(
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = VibeSurface.copy(alpha = 0.95f)),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(
-                        width = 2.dp,
-                        brush = Brush.horizontalGradient(listOf(VibePrimaryNeon, VibeSecondaryPink, VibeYellowGold)),
-                        shape = RoundedCornerShape(24.dp)
-                    )
-                    .shadow(16.dp, RoundedCornerShape(24.dp))
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Text(text = gift.emoji, fontSize = 32.sp)
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column {
-                            Text(
-                                text = "${activeGift.senderName} envió ${gift.name}",
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp
-                            )
-                            Text(
-                                text = "Valor: ${gift.coinCost} monedas ($${String.format("%.2f", gift.usdValue)} USD)",
-                                color = VibeYellowGold,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Transparent 75% vs 25% Revenue Split Banner
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color.Black.copy(alpha = 0.6f))
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .clip(CircleShape)
-                                    .background(VibeSuccessGreen)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "Creador recibe (75%): +$${String.format("%.2f", activeGift.creatorShareUsd)} USD",
-                                color = VibeSuccessGreen,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-
-                        Text(
-                            text = "VibeStream (25%)",
-                            color = VibeCommissionBlue,
-                            fontSize = 10.sp
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 120.dp)
+                .size(280.dp)
+                .scale(auraScale.value * heroPulse)
+                .clip(CircleShape)
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(
+                            VibeYellowGold.copy(alpha = 0.35f),
+                            VibeOrangeHot.copy(alpha = 0.20f),
+                            Color.Transparent
                         )
-                    }
+                    )
+                )
+        )
+
+        // 3. Criatura / Personaje 3D Gigante en la mitad inferior
+        val nameLower = gift.name.lowercase()
+        val isGorilla = nameLower.contains("gorila") || nameLower.contains("gorilla") || nameLower.contains("mono") || nameLower.contains("beast")
+        val isDragon = gift.animationType == GiftAnimationType.GALAXY_DRAGON || nameLower.contains("dragon") || nameLower.contains("dragón")
+        val isRocket = gift.animationType == GiftAnimationType.VIBE_ROCKET || nameLower.contains("cohete") || nameLower.contains("rocket")
+        val isCrown = gift.animationType == GiftAnimationType.GOLDEN_CROWN || nameLower.contains("corona") || nameLower.contains("crown")
+        val isRose = gift.animationType == GiftAnimationType.ROSE_BURST || nameLower.contains("rosa") || nameLower.contains("rose")
+        val isTrophy = gift.animationType == GiftAnimationType.DIAMOND_TROPHY || nameLower.contains("trofeo") || nameLower.contains("diamond")
+        val isFire = gift.animationType == GiftAnimationType.AURA_FIRE || nameLower.contains("fuego") || nameLower.contains("fire")
+        val isCat = gift.animationType == GiftAnimationType.CYBER_CAT || nameLower.contains("gato") || nameLower.contains("cat")
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 110.dp)
+                .offset { IntOffset(stompShake.roundToInt(), heroOffsetY.value.roundToInt()) }
+                .scale(entranceScale.value * heroPulse),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                when {
+                    isGorilla -> Text("🦍", fontSize = 160.sp, modifier = Modifier.shadow(28.dp, CircleShape))
+                    isDragon -> Text("🐉", fontSize = 160.sp, modifier = Modifier.rotate(-10f + stompShake).shadow(28.dp, CircleShape))
+                    isRocket -> Text("🚀", fontSize = 150.sp, modifier = Modifier.rotate(-25f).shadow(28.dp, CircleShape))
+                    isCrown -> Text("👑", fontSize = 155.sp, modifier = Modifier.shadow(28.dp, CircleShape))
+                    isRose -> Text("🌹", fontSize = 150.sp, modifier = Modifier.shadow(28.dp, CircleShape))
+                    isTrophy -> Text("💎", fontSize = 150.sp, modifier = Modifier.shadow(28.dp, CircleShape))
+                    isFire -> Text("🔥", fontSize = 155.sp, modifier = Modifier.shadow(28.dp, CircleShape))
+                    isCat -> Text("🐱", fontSize = 150.sp, modifier = Modifier.shadow(28.dp, CircleShape))
+                    else -> Text(gift.emoji.ifEmpty { "🎁" }, fontSize = 150.sp, modifier = Modifier.shadow(28.dp, CircleShape))
+                }
+
+                // Etiqueta limpia del regalo
+                Box(
+                    modifier = Modifier
+                        .offset(y = (-8).dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color.Black.copy(alpha = 0.7f))
+                        .padding(horizontal = 14.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = gift.name,
+                        color = Color.White,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
                 }
             }
         }

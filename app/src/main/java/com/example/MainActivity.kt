@@ -21,6 +21,18 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        try {
+            if (com.google.firebase.FirebaseApp.getApps(applicationContext).isEmpty()) {
+                val options = com.google.firebase.FirebaseOptions.Builder()
+                    .setProjectId("tiktok-live-app-c6854")
+                    .setApplicationId("com.example")
+                    .setApiKey("AIzaSyMockKeyForInitializationOnly")
+                    .setStorageBucket("tiktok-live-app-c6854.firebasestorage.app")
+                    .build()
+                com.google.firebase.FirebaseApp.initializeApp(applicationContext, options)
+            }
+        } catch (_: Exception) {
+        }
         enableEdgeToEdge()
         com.example.ui.components.GiftEffectManager.prewarmAllAssets(
             applicationContext,

@@ -290,6 +290,7 @@ fun FeedScreen(
 
             // Active Gift Takeover Animation
             val activeGift by viewModel.activeViewerGift.collectAsStateWithLifecycle()
+            val availableGifts by viewModel.availableGifts.collectAsStateWithLifecycle()
             GiftAnimationOverlay(
                 activeGift = activeGift,
                 onAnimationFinished = { viewModel.clearActiveGiftAnimation() }
@@ -300,9 +301,10 @@ fun FeedScreen(
                 GiftSendBottomSheet(
                     coinsBalance = coinsBalance,
                     streamerName = post.creatorHandle,
+                    availableGifts = availableGifts,
                     onDismiss = { showGiftSheetForPost = null },
                     onSendGift = { gift ->
-                        viewModel.sendGift(gift, post.creatorHandle)
+                        viewModel.sendDynamicGift(gift, post.creatorHandle)
                     },
                     onOpenCoinStore = {
                         showGiftSheetForPost = null

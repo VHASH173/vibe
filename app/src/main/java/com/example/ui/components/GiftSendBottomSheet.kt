@@ -54,8 +54,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.model.Gift
-import com.example.model.GiftCatalog
+import coil.compose.AsyncImage
+import com.example.model.GiftModel
 import com.example.ui.theme.VibeAccentPurple
 import com.example.ui.theme.VibeCommissionBlue
 import com.example.ui.theme.VibeOrangeHot
@@ -74,15 +74,18 @@ import com.example.ui.theme.VibeYellowGold
 fun GiftSendBottomSheet(
     coinsBalance: Int,
     streamerName: String,
+    availableGifts: List<GiftModel>,
     onDismiss: () -> Unit,
-    onSendGift: (Gift) -> Unit,
+    onSendGift: (GiftModel) -> Unit,
     onOpenCoinStore: () -> Unit,
     onSendTreasureBox: ((totalCoins: Int, maxWinners: Int) -> Unit)? = null
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val haptic = LocalHapticFeedback.current
     var selectedTab by remember { mutableIntStateOf(0) } // 0 = Regalos, 1 = Cofres
-    var selectedGift by remember { mutableStateOf<Gift?>(GiftCatalog.allGifts[0]) }
+    var selectedGift by remember(availableGifts) {
+        mutableStateOf(availableGifts.firstOrNull())
+    }
 
     // Treasure box configurations
     var selectedTreasureCoins by remember { mutableIntStateOf(100) }
@@ -260,17 +263,17 @@ fun GiftSendBottomSheet(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Gift Grid
+                // Dynamic Gift Grid loaded from Firebase Firestore
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(3),
                     contentPadding = PaddingValues(2.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.height(210.dp)
+                    modifier = Modifier.height(230.dp)
                 ) {
-                    items(GiftCatalog.allGifts) { gift ->
+                    items(availableGifts, key = { it.id }) { gift ->
                         val isSelected = selectedGift?.id == gift.id
-                        val canAfford = coinsBalance >= gift.coinCost
+                        val canAfford = coinsBalance >= gift.diamond
 
                         Box(
                             modifier = Modifier
@@ -292,26 +295,14 @@ fun GiftSendBottomSheet(
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .background(
-                                            if (isSelected) VibePrimaryNeon.copy(alpha = 0.25f)
-                                            else Color.Black.copy(alpha = 0.4f)
-                                        )
-                                        .padding(horizontal = 6.dp, vertical = 1.5.dp)
-                                ) {
-                                    Text(
-                                        text = gift.tag,
-                                        color = if (isSelected) VibePrimaryNeon else VibeTextSecondary,
-                                        fontSize = 8.5.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        maxLines = 1
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(text = gift.emoji, fontSize = 26.sp)
-                                Spacer(modifier = Modifier.height(2.dp))
+                                // Icono: Cárgalo usando Coil AsyncImage
+                                AsyncImage(
+                                    model = gift.storageIcon.ifEmpty { gift.picture },
+                                    contentDescription = gift.name,
+                                    modifier = Modifier.size(56.dp)
+                                )
+                                Spacer(modifier = Modifier.height(3.dp))
+                                // Nombre del regalo
                                 Text(
                                     text = gift.name,
                                     color = VibeTextPrimary,
@@ -320,9 +311,10 @@ fun GiftSendBottomSheet(
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
+                                // Costo en monedas (diamantes)
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
-                                        text = "🪙 ${gift.coinCost}",
+                                        text = "${gift.diamond} 🪙",
                                         color = if (canAfford) VibeYellowGold else Color.Red,
                                         fontSize = 10.5.sp,
                                         fontWeight = FontWeight.Bold
@@ -337,7 +329,9 @@ fun GiftSendBottomSheet(
 
                 // Selected Gift Details & Send Button
                 selectedGift?.let { gift ->
-                    val canAfford = coinsBalance >= gift.coinCost
+                    val canAfford = coinsBalance >= gift.diamond
+                    val usdValue = gift.diamond * 0.01
+                    val creatorShareUsd = usdValue * 0.75
 
                     Row(
                         modifier = Modifier
@@ -349,9 +343,14 @@ fun GiftSendBottomSheet(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        AsyncImage(
+                            model = gift.storageIcon.ifEmpty { gift.picture },
+                            contentDescription = gift.name,
+                            modifier = Modifier.size(40.dp)
+                        )
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "${gift.emoji} ${gift.name} (${gift.coinCost}🪙)",
+                                text = "${gift.name} (${gift.diamond} 🪙)",
                                 color = Color.White,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
@@ -359,7 +358,7 @@ fun GiftSendBottomSheet(
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
-                                text = "Gana creador: +$${String.format("%.2f", gift.creatorShareUsd)} USD (75%)",
+                                text = "Gana creador: +$${String.format("%.2f", creatorShareUsd)} USD (75%)",
                                 color = VibeSuccessGreen,
                                 fontSize = 11.sp,
                                 maxLines = 1,

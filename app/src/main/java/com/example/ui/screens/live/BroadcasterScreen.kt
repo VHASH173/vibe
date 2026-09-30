@@ -86,6 +86,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.model.FilterType
 import com.example.ui.components.ArCanvasOverlay
+import com.example.ui.components.FloatingGiftComboBanner
 import com.example.ui.components.GiftAnimationOverlay
 import com.example.ui.components.LiveKitQualityPill
 import com.example.ui.theme.VibeAccentPurple
@@ -116,6 +117,7 @@ fun BroadcasterScreen(
     val broadcasterState by viewModel.broadcasterState.collectAsStateWithLifecycle()
     val webRtcStats by viewModel.webRtcStats.collectAsStateWithLifecycle()
     val viewerChat by viewModel.viewerChat.collectAsStateWithLifecycle()
+    val activeGift by viewModel.activeViewerGift.collectAsStateWithLifecycle()
     val isLocalRecording by viewModel.isLocalRecording.collectAsStateWithLifecycle()
     val recordingSeconds by viewModel.recordingDurationSeconds.collectAsStateWithLifecycle()
 
@@ -279,6 +281,20 @@ fun BroadcasterScreen(
         ArCanvasOverlay(
             filterType = broadcasterState.activeFilter,
             modifier = Modifier.fillMaxSize()
+        )
+
+        // 2.1 Full-screen Cinematic Gift Animation Overlay
+        GiftAnimationOverlay(
+            activeGift = activeGift,
+            onAnimationFinished = { viewModel.clearActiveGiftAnimation() }
+        )
+
+        // 2.2 Floating Gift Combo Pill on Left Side
+        FloatingGiftComboBanner(
+            activeGift = activeGift,
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .padding(bottom = 70.dp)
         )
 
         // 3. Top HUD: Live Badge, Timer, Local REC Button, Viewers, LiveKit WebRTC Stats, Earnings, and Safe End Button

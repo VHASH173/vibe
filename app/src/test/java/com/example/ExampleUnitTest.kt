@@ -87,4 +87,46 @@ class ExampleUnitTest {
         val treasureWebm = com.example.model.WebmAssetMapper.getTreasureBoxWebmUri()
         assertEquals("asset:///webm/cofre_magia.webm", treasureWebm)
     }
+
+    @Test
+    fun testGiftModelStructure() {
+        val gift = com.example.model.GiftModel(
+            id = 5655L,
+            name = "Cohete Espacial",
+            diamond = 1000L,
+            type = 2L,
+            storageIcon = "https://firebasestorage.googleapis.com/v0/b/tiktok-live-app-c6854.firebasestorage.app/o/rocket.webp",
+            picture = "https://p16-webcast.tiktokcdn.com/rocket.png"
+        )
+        assertEquals(5655L, gift.id)
+        assertEquals(5655, gift.idInt)
+        assertEquals("Cohete Espacial", gift.name)
+        assertEquals(1000L, gift.diamond)
+        assertEquals(1000, gift.diamondInt)
+        assertEquals(2L, gift.type)
+        assertEquals(2, gift.typeInt)
+        assertTrue(gift.storageIcon.contains("tiktok-live-app-c6854"))
+    }
+
+    @Test
+    fun testDynamicGift7525SplitCalculation() {
+        val gift = com.example.model.GiftModel(
+            id = 5827L,
+            name = "Dragón Galaxia",
+            diamond = 2000L,
+            type = 3L,
+            storageIcon = "https://firebasestorage.googleapis.com/v0/b/tiktok-live-app-c6854.firebasestorage.app/o/dragon.webp",
+            picture = "https://p16-webcast.tiktokcdn.com/dragon.png"
+        )
+        val coinCost = gift.diamond.toInt()
+        val usdValue = coinCost * 0.01
+        val creatorShareUsd = usdValue * 0.75
+        val platformShareUsd = usdValue * 0.25
+        val creatorCoins = (coinCost * 0.75).toInt()
+
+        assertEquals(20.0, usdValue, 0.001)
+        assertEquals(15.0, creatorShareUsd, 0.001)
+        assertEquals(5.0, platformShareUsd, 0.001)
+        assertEquals(1500, creatorCoins)
+    }
 }

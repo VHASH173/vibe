@@ -1,8 +1,5 @@
 package com.example.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -29,16 +25,14 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.CardGiftcard
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.LocalFireDepartment
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,62 +40,89 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.ChatMessage
-import com.example.ui.theme.VibeAccentPurple
-import com.example.ui.theme.VibeOrangeHot
 import com.example.ui.theme.VibePrimaryNeon
 import com.example.ui.theme.VibeSecondaryPink
-import com.example.ui.theme.VibeSuccessGreen
-import com.example.ui.theme.VibeTextSecondary
 import com.example.ui.theme.VibeYellowGold
 
 /**
- * Real-time Chat Overlay component for the live stream screen.
- * Renders real-time incoming messages, VIP/gift announcements, and provides
- * a rich input box with quick reaction emojis.
+ * Overlay de Chat y Barra de Acción Inferior idéntica a la interfaz oficial de TikTok Live para celulares.
  */
 @Composable
 fun LiveChatOverlay(
     messages: List<ChatMessage>,
     onSendMessage: (String) -> Unit,
     onUserClicked: (String) -> Unit,
+    onOpenGiftSheet: () -> Unit = {},
+    onSendQuickRose: () -> Unit = {},
+    onShareClicked: () -> Unit = {},
+    onMultiGuestClicked: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var inputText by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
 
-    val quickReactions = listOf("🔥", "👏", "❤️", "💎", "🚀", "🎉", "👑", "⚡")
-
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .padding(bottom = 6.dp)
     ) {
-        // Message Stream Area (max height ~220dp with gradient fade-out at top)
-        Box(
+        // 1. Área de Chat y Mensajes (Alineada abajo a la izquierda)
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(210.dp)
+                .fillMaxWidth(0.85f)
+                .height(230.dp)
                 .padding(horizontal = 12.dp)
         ) {
+            // Notificación del sistema de filtrado de comentarios de TikTok Live
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Color.Black.copy(alpha = 0.45f))
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = "🎵", fontSize = 11.sp)
+                }
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "Algunos comentarios de este LIVE se filtraron para proteger la experiencia de la comunidad.",
+                    color = Color.White.copy(alpha = 0.9f),
+                    fontSize = 11.sp,
+                    lineHeight = 14.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
             LazyColumn(
                 state = listState,
                 reverseLayout = true,
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(vertical = 4.dp)
+                contentPadding = PaddingValues(vertical = 2.dp)
             ) {
                 items(
                     items = messages,
                     key = { it.id }
                 ) { msg ->
-                    ChatBubbleItem(
+                    TikTokChatBubbleItem(
                         message = msg,
                         onUserClicked = { onUserClicked(msg.senderName) }
                     )
@@ -109,48 +130,25 @@ fun LiveChatOverlay(
             }
         }
 
-        Spacer(modifier = Modifier.height(6.dp))
-
-        // Quick Emoji Reaction Bar
-        LazyRow(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            items(quickReactions) { emoji ->
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(Color.Black.copy(alpha = 0.5f))
-                        .border(0.5.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(14.dp))
-                        .clickable { onSendMessage(emoji) }
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(text = emoji, fontSize = 14.sp)
-                }
-            }
-        }
-
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Message Input Row
+        // 2. Barra de Acción Inferior Oficial de TikTok Live Mobile
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            // Campo "Escribe algo..." (Cápsula oscura en la izquierda)
             OutlinedTextField(
                 value = inputText,
                 onValueChange = { inputText = it },
                 placeholder = {
                     Text(
-                        text = "Escribe un comentario en vivo...",
-                        color = VibeTextSecondary,
-                        fontSize = 12.sp
+                        text = "Escribe algo...",
+                        color = Color.White.copy(alpha = 0.65f),
+                        fontSize = 13.sp
                     )
                 },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
@@ -163,28 +161,27 @@ fun LiveChatOverlay(
                     }
                 ),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = VibePrimaryNeon,
-                    unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
-                    focusedContainerColor = Color.Black.copy(alpha = 0.7f),
-                    unfocusedContainerColor = Color.Black.copy(alpha = 0.6f),
+                    focusedBorderColor = Color.Transparent,
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedContainerColor = Color.Black.copy(alpha = 0.55f),
+                    unfocusedContainerColor = Color.Black.copy(alpha = 0.55f),
                     focusedTextColor = Color.White,
                     unfocusedTextColor = Color.White
                 ),
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(26.dp),
                 trailingIcon = {
                     if (inputText.isNotBlank()) {
                         IconButton(
                             onClick = {
                                 onSendMessage(inputText.trim())
                                 inputText = ""
-                            },
-                            modifier = Modifier.testTag("viewer_chat_send_button")
+                            }
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.Send,
                                 contentDescription = "Enviar",
                                 tint = VibePrimaryNeon,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }
@@ -192,117 +189,151 @@ fun LiveChatOverlay(
                 singleLine = true,
                 modifier = Modifier
                     .weight(1f)
-                    .height(48.dp)
+                    .height(44.dp)
                     .testTag("viewer_chat_input")
             )
+
+            // Botón Multi-Guest / Interacción (👥)
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.55f))
+                    .clickable { onMultiGuestClicked() }
+                    .testTag("multi_guest_button"),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Group,
+                    contentDescription = "Multi-Guest",
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            // Botón Rápido de Rosa (🌹)
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.55f))
+                    .clickable { onSendQuickRose() }
+                    .testTag("quick_rose_button"),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = "🌹", fontSize = 22.sp)
+            }
+
+            // Botón de Cofre / Caja de Regalo TikTok (🎁) con badge de monedas
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.linearGradient(
+                            listOf(VibeSecondaryPink, Color(0xFFE11D48))
+                        )
+                    )
+                    .clickable { onOpenGiftSheet() }
+                    .testTag("open_gifts_sheet_button"),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CardGiftcard,
+                    contentDescription = "Enviar Regalo",
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp)
+                )
+                // Badge "1" en la esquina inferior derecha
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .clip(CircleShape)
+                        .background(Color(0xFF27273A))
+                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                ) {
+                    Text(
+                        text = "1",
+                        color = Color.White,
+                        fontSize = 8.5.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            // Botón de Compartir (↗)
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.55f))
+                    .clickable { onShareClicked() }
+                    .testTag("share_live_button"),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Share,
+                    contentDescription = "Compartir",
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun ChatBubbleItem(
+private fun TikTokChatBubbleItem(
     message: ChatMessage,
     onUserClicked: () -> Unit
 ) {
-    if (message.isDonation) {
-        // Special Gift Donation Notification Card
-        Row(
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.Black.copy(alpha = 0.55f))
+            .clickable { onUserClicked() }
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Avatar circular del usuario
+        Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(14.dp))
-                .background(
-                    Brush.horizontalGradient(
-                        listOf(
-                            VibeSecondaryPink.copy(alpha = 0.9f),
-                            VibeAccentPurple.copy(alpha = 0.85f)
-                        )
-                    )
-                )
-                .border(
-                    width = 1.dp,
-                    color = VibeYellowGold.copy(alpha = 0.8f),
-                    shape = RoundedCornerShape(14.dp)
-                )
-                .clickable { onUserClicked() }
-                .padding(horizontal = 10.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .size(24.dp)
+                .clip(CircleShape)
+                .background(Color(0xFF374151)),
+            contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.Default.CardGiftcard,
-                contentDescription = null,
-                tint = VibeYellowGold,
-                modifier = Modifier.size(16.dp)
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Column {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = message.senderName,
-                        color = Color.White,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 12.sp
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "envió ${message.giftName ?: "Regalo"} 🎁",
-                        color = VibeYellowGold,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp
-                    )
-                }
-                if (message.creatorShareUsd > 0) {
-                    Text(
-                        text = "+$${String.format("%.2f", message.creatorShareUsd)} al creador (75%)",
-                        color = Color.White.copy(alpha = 0.85f),
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            }
+            Text(text = "👤", fontSize = 12.sp)
         }
-    } else {
-        // Regular Live Chat Bubble
-        Row(
-            modifier = Modifier
-                .clip(RoundedCornerShape(12.dp))
-                .background(Color.Black.copy(alpha = 0.55f))
-                .border(
-                    width = 0.5.dp,
-                    color = Color.White.copy(alpha = 0.1f),
-                    shape = RoundedCornerShape(12.dp)
-                )
-                .clickable { onUserClicked() }
-                .padding(horizontal = 10.dp, vertical = 5.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Badge / Icon
-            if (message.senderName.contains("Host", ignoreCase = true) || message.senderName.startsWith("@streamer")) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(VibeSecondaryPink)
-                        .padding(horizontal = 4.dp, vertical = 1.dp)
-                ) {
-                    Text(text = "HOST", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Black)
-                }
-                Spacer(modifier = Modifier.width(5.dp))
-            } else if (message.senderName.length % 3 == 0) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(VibeYellowGold.copy(alpha = 0.3f))
-                        .padding(horizontal = 4.dp, vertical = 1.dp)
-                ) {
-                    Text(text = "VIP", color = VibeYellowGold, fontSize = 8.sp, fontWeight = FontWeight.Bold)
-                }
-                Spacer(modifier = Modifier.width(5.dp))
-            }
 
-            Text(
-                text = "${message.senderName}: ",
-                color = VibePrimaryNeon,
-                fontWeight = FontWeight.Bold,
-                fontSize = 12.sp
-            )
+        Spacer(modifier = Modifier.width(6.dp))
+
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = message.senderName,
+                    color = Color.White.copy(alpha = 0.85f),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 11.5.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                // Badge de nivel/anfitrión estilo TikTok (🎯 N.º 1)
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color(0xFFE11D48))
+                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                ) {
+                    Text(
+                        text = "🎯 N.º 1",
+                        color = Color.White,
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                }
+            }
             Text(
                 text = message.message,
                 color = Color.White,

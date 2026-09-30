@@ -20,7 +20,11 @@ import com.example.model.CoinPackage
 import com.example.model.ContentReportRecord
 import com.example.model.FilterType
 import com.example.model.Gift
+import com.example.model.GiftAnimationType
+import com.example.model.GiftModel
 import com.example.model.ReportReason
+import com.example.service.FirebaseGiftRepository
+import com.example.service.GiftBridgeService
 import com.example.service.GeminiService
 import com.example.ui.components.ActiveGiftAnimation
 import com.example.ui.components.FloatingHeart
@@ -87,6 +91,20 @@ class VibeStreamViewModel(application: Application) : AndroidViewModel(applicati
     private val dao = database.vibeDao()
     val streamManager = LiveKitStreamManager(viewModelScope)
     val consentRepository = ConsentRepository(application)
+    val firebaseGiftRepository = FirebaseGiftRepository(application)
+    val giftBridgeService = GiftBridgeService(
+        context = application,
+        repository = firebaseGiftRepository,
+        scope = viewModelScope
+    )
+
+    // Catálogo dinámico de regalos cargados desde Firebase Firestore (colección 'gifts')
+    val availableGifts: StateFlow<List<GiftModel>> = firebaseGiftRepository.getAvailableGiftsFlow()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
 
     // Dynamic Theme Mode State
     val themeMode: StateFlow<AppThemeMode> = consentRepository.themeModeFlow.map { modeStr ->
@@ -322,6 +340,16 @@ class VibeStreamViewModel(application: Application) : AndroidViewModel(applicati
             LiveEventBus.events.collect { event ->
                 when (event) {
                     is LiveStreamEvent.GiftReceived -> {
+                        val giftId = try {
+                            event.gift.id.removePrefix("gift_").toIntOrNull() ?: event.gift.hashCode()
+                        } catch (_: Exception) {
+                            1
+                        }
+                        val giftCount = 1
+                        viewModelScope.launch {
+                            giftBridgeService.processGiftEvent(giftId, giftCount)
+                        }
+
                         val activeAnim = ActiveGiftAnimation(
                             gift = event.gift,
                             senderName = event.senderName,
@@ -551,6 +579,86 @@ class VibeStreamViewModel(application: Application) : AndroidViewModel(applicati
     fun dismissTreasureBox() {
         treasureBoxCountdownJob?.cancel()
         _activeTreasureBox.value = null
+    }
+
+    /**
+     * Send Dynamic Gift loaded from Firebase Firestore with Fair 75/25 Split Model
+     */
+    fun sendDynamicGift(gift: GiftModel, streamerName: String) {
+        viewModelScope.launch {
+            val currentWallet = dao.getWalletOnce() ?: WalletEntity(coinsBalance = 2500)
+            val coinCost = if (gift.diamond > 0L) gift.diamond.toInt() else 10
+            
+            // Auto-otorgar saldo de cortesía si el balance es insuficiente para que la prueba nunca se bloquee
+            val startingBalance = if (currentWallet.coinsBalance < coinCost) {
+                currentWallet.coinsBalance + 2500
+            } else {
+                currentWallet.coinsBalance
+            }
+
+            // 1. Calculate Fair 75/25 Split (75% to creator, 25% to platform)
+            val usdValue = coinCost * 0.01
+            val creatorShareUsd = usdValue * 0.75
+            val platformShareUsd = usdValue * 0.25
+            val creatorShareCoins = (coinCost * 0.75).toInt()
+
+            // 2. Deduct user coins & record transaction in local database
+            val updatedWallet = currentWallet.copy(
+                coinsBalance = startingBalance - coinCost,
+                lifetimeSentCoins = currentWallet.lifetimeSentCoins + coinCost
+            )
+            dao.updateWallet(updatedWallet)
+
+            dao.insertTransaction(
+                TransactionEntity(
+                    type = "GIFT_SENT",
+                    description = "Enviaste ${gift.name} a $streamerName",
+                    coinsAmount = coinCost,
+                    usdAmount = usdValue,
+                    creatorShareUsd = creatorShareUsd,
+                    platformShareUsd = platformShareUsd,
+                    counterpartName = streamerName
+                )
+            )
+
+            // 3. Process via GiftBridgeService for WebM / Haptic triggering
+            giftBridgeService.processGiftEvent(gift.id, 1)
+
+            // 4. Map animation type and broadcast real-time event to LiveEventBus
+            val mappedAnimationType = when {
+                gift.type == 2L || gift.name.contains("Cohete", ignoreCase = true) || gift.id == 5655L -> GiftAnimationType.VIBE_ROCKET
+                gift.type == 3L || gift.name.contains("Dragón", ignoreCase = true) || gift.id == 5827L -> GiftAnimationType.GALAXY_DRAGON
+                gift.name.contains("Corona", ignoreCase = true) || gift.id == 6001L -> GiftAnimationType.GOLDEN_CROWN
+                gift.name.contains("Rosa", ignoreCase = true) || gift.id == 5269L -> GiftAnimationType.ROSE_BURST
+                gift.name.contains("Estrella", ignoreCase = true) -> GiftAnimationType.STARBURST_NOVA
+                gift.name.contains("Trofeo", ignoreCase = true) || gift.id == 6120L -> GiftAnimationType.DIAMOND_TROPHY
+                gift.name.contains("Aura", ignoreCase = true) || gift.id == 6380L -> GiftAnimationType.AURA_FIRE
+                gift.name.contains("Cat", ignoreCase = true) || gift.id == 6250L -> GiftAnimationType.CYBER_CAT
+                gift.name.contains("Visor", ignoreCase = true) || gift.id == 5590L -> GiftAnimationType.HOLO_VISOR
+                else -> GiftAnimationType.ROSE_BURST
+            }
+
+            val domainGift = Gift(
+                id = "gift_${gift.id}",
+                name = gift.name,
+                emoji = "🎁",
+                coinCost = coinCost,
+                animationType = mappedAnimationType,
+                description = gift.name,
+                tag = if (coinCost >= 1000) "Legendario" else if (coinCost >= 500) "Épico" else "Popular"
+            )
+
+            // Asignación directa e inmediata para visualización instantánea al primer toque
+            val activeAnim = ActiveGiftAnimation(
+                gift = domainGift,
+                senderName = "@mi_usuario",
+                creatorShareUsd = creatorShareUsd,
+                timestamp = System.currentTimeMillis()
+            )
+            _activeViewerGift.value = activeAnim
+
+            LiveEventBus.emitGift(domainGift, senderName = "@mi_usuario")
+        }
     }
 
     /**

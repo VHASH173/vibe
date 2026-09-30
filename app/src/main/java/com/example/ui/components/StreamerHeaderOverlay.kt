@@ -1,15 +1,6 @@
 package com.example.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -25,32 +17,26 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Flag
-import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.webrtc.WebRtcStats
-import com.example.ui.theme.VibePrimaryNeon
 import com.example.ui.theme.VibeSecondaryPink
-import com.example.ui.theme.VibeSurfaceElevated
-import com.example.ui.theme.VibeTextSecondary
 
 /**
- * Top Overlay Component that displays the streamer's name, avatar, category,
- * real-time viewer count, follow toggle, WebRTC quality, report flag, and close button.
+ * Encabezado Superior Oficial de TikTok Live para celulares:
+ * - Píldora del Creador: Avatar, Nombre (@streamer), Me gusta (♥ 849) y botón "+ Seguir"
+ * - Sub-píldoras: "🔥 Clasificación diaria" y "Liga de poder 🏆"
+ * - Espectadores y botón de cerrar "✕"
  */
 @Composable
 fun StreamerHeaderOverlay(
@@ -66,155 +52,156 @@ fun StreamerHeaderOverlay(
     onCloseClicked: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "live_pulse")
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.3f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(800),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulse"
-    )
-
-    Row(
+    Column(
         modifier = modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 10.dp, vertical = 6.dp)
     ) {
-        // Left: Streamer Profile & Live Viewer Pill (Responsive without pushing right controls)
+        // Fila Principal Superior
         Row(
-            modifier = Modifier
-                .weight(1f, fill = false)
-                .clip(RoundedCornerShape(26.dp))
-                .background(Color.Black.copy(alpha = 0.65f))
-                .border(
-                    width = 1.dp,
-                    brush = Brush.horizontalGradient(
-                        listOf(VibePrimaryNeon.copy(alpha = 0.5f), Color.Transparent)
-                    ),
-                    shape = RoundedCornerShape(26.dp)
-                )
-                .clickable { onStreamerProfileClicked() }
-                .padding(4.dp),
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Avatar
-            Box(
+            // Píldora del Creador en la Izquierda
+            Row(
                 modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.linearGradient(
-                            listOf(VibePrimaryNeon, VibeSecondaryPink)
-                        )
-                    )
-                    .padding(2.dp)
-                    .clip(CircleShape)
-                    .background(VibeSurfaceElevated),
-                contentAlignment = Alignment.Center
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(Color.Black.copy(alpha = 0.55f))
+                    .clickable { onStreamerProfileClicked() }
+                    .padding(3.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = streamerAvatar, fontSize = 18.sp)
-            }
+                // Avatar del Streamer
+                Box(
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF374151)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = streamerAvatar.ifEmpty { "👤" }, fontSize = 16.sp)
+                }
 
-            Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(6.dp))
 
-            // Name + Viewer Count
-            Column(modifier = Modifier.weight(1f, fill = false)) {
-                Text(
-                    text = streamerName,
-                    color = Color.White,
-                    fontSize = 12.5.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Pulsing Red Dot
-                    Box(
-                        modifier = Modifier
-                            .size(5.dp)
-                            .scale(pulseScale)
-                            .clip(CircleShape)
-                            .background(VibeSecondaryPink)
-                    )
-                    Spacer(modifier = Modifier.width(3.dp))
+                // Nombre y Likes
+                Column(
+                    modifier = Modifier.padding(end = 6.dp)
+                ) {
                     Text(
-                        text = "$viewerCount espectadores",
-                        color = VibeTextSecondary,
-                        fontSize = 9.5.sp,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1
+                        text = streamerName.removePrefix("@"),
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = "♥ ${viewerCount * 3 + 120}",
+                        color = Color.White.copy(alpha = 0.8f),
+                        fontSize = 10.sp
+                    )
+                }
+
+                // Botón "+ Seguir"
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(if (isFollowing) Color.Gray else Color(0xFFFE2C55))
+                        .clickable { onFollowToggle() }
+                        .padding(horizontal = 10.dp, vertical = 5.dp)
+                        .testTag("follow_streamer_button"),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (isFollowing) "Siguiendo" else "+ Seguir",
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.width(6.dp))
-
-            // Follow Button
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(
-                        if (isFollowing) Color.White.copy(alpha = 0.15f)
-                        else VibeSecondaryPink
-                    )
-                    .clickable { onFollowToggle() }
-                    .padding(horizontal = 8.dp, vertical = 5.dp)
-                    .testTag("follow_streamer_button")
+            // Derecha: Avatares de espectadores y Botón Cerrar (✕)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Text(
-                    text = if (isFollowing) "Siguiendo" else "+ Seguir",
-                    color = Color.White,
-                    fontSize = 10.5.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1
-                )
+                // Insignias de Top Espectadores
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.Black.copy(alpha = 0.55f))
+                        .padding(horizontal = 6.dp, vertical = 3.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(text = "👑", fontSize = 11.sp)
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text(
+                            text = "$viewerCount",
+                            color = Color.White,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                // Botón Cerrar (✕)
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.45f))
+                        .clickable { onCloseClicked() }
+                        .testTag("close_stream_button"),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Cerrar Live",
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
             }
         }
 
-        // Right side: WebRTC Quality Pill, Flag Report, and Close Button
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            // LiveKit Quality Pill
-            LiveKitQualityPill(stats = webRtcStats ?: WebRtcStats())
+        Spacer(modifier = Modifier.height(6.dp))
 
-            // Flag / Report button
-            IconButton(
-                onClick = onReportClicked,
+        // Sub-píldoras de TikTok Live: "🔥 Clasificación diaria" y "Liga de poder 🏆"
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
                 modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.6f))
-                    .testTag("report_streamer_flag_button")
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .padding(horizontal = 8.dp, vertical = 3.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Flag,
-                    contentDescription = "Reportar Streamer",
-                    tint = VibeSecondaryPink,
-                    modifier = Modifier.size(18.dp)
+                Text(
+                    text = "🔥 Clasificación diaria",
+                    color = Color.White,
+                    fontSize = 10.5.sp,
+                    fontWeight = FontWeight.Medium
                 )
             }
 
-            // Close stream button
-            IconButton(
-                onClick = onCloseClicked,
+            Box(
                 modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.6f))
-                    .testTag("close_viewer_button")
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .padding(horizontal = 8.dp, vertical = 3.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Salir",
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
+                Text(
+                    text = "Liga de poder 🏆",
+                    color = Color.White,
+                    fontSize = 10.5.sp,
+                    fontWeight = FontWeight.Medium
                 )
             }
         }

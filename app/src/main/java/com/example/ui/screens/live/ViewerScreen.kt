@@ -57,11 +57,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.local.LiveStreamEntity
 import com.example.model.FilterType
 import com.example.ui.components.ArCanvasOverlay
+import com.example.ui.components.FloatingGiftComboBanner
 import com.example.ui.components.FloatingHeartsOverlay
 import com.example.ui.components.FloatingLikeButton
 import com.example.ui.components.GiftAnimationOverlay
 import com.example.ui.components.GiftSendBottomSheet
 import com.example.ui.components.LiveChatOverlay
+import com.example.ui.components.LiveGiftDockBar
 import com.example.ui.components.LiveKitVideoRenderer
 import com.example.ui.components.PublicUserProfile
 import com.example.ui.components.ReportBottomSheet
@@ -88,6 +90,7 @@ fun ViewerScreen(
     val floatingHearts by viewModel.floatingHearts.collectAsStateWithLifecycle()
     val activeGift by viewModel.activeViewerGift.collectAsStateWithLifecycle()
     val webRtcStats by viewModel.webRtcStats.collectAsStateWithLifecycle()
+    val availableGifts by viewModel.availableGifts.collectAsStateWithLifecycle()
 
     var showGiftSheet by remember { mutableStateOf(false) }
     var isFollowing by remember { mutableStateOf(false) }
@@ -243,21 +246,29 @@ fun ViewerScreen(
                     .padding(top = 92.dp, start = 12.dp)
             )
 
-            // 6. Active Screen-Takeover Gift Animation
+            // 6. Active Screen-Takeover Gift Animation (TikTok Live Style)
             GiftAnimationOverlay(
                 activeGift = activeGift,
                 onAnimationFinished = { viewModel.clearActiveGiftAnimation() }
             )
 
-            // 7. Bottom Section: Real-time Chat Overlay & Floating Action Buttons
+            // 6.1 Floating Gift Combo Pill on Left Side (TikTok Live Style: Avatar + Name + Gift + x1)
+            FloatingGiftComboBanner(
+                activeGift = activeGift,
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .padding(bottom = 70.dp)
+            )
+
+            // 7. Bottom Section: Official TikTok Live Chat Overlay & Action Bar
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .navigationBarsPadding()
-                    .padding(bottom = 10.dp)
+                    .padding(bottom = 6.dp)
             ) {
-                // Real-time Chat Overlay (Messages + Quick Reaction Chips + Chat Input)
+                // Official TikTok Live Chat & Bottom Action Row (Escribe algo... + 👥 + 🌹 + 🎁 + ↗)
                 LiveChatOverlay(
                     messages = viewerChat,
                     onSendMessage = { msg -> viewModel.sendChatMessage(msg) },
@@ -271,44 +282,24 @@ fun ViewerScreen(
                             likes = "1.2K"
                         )
                     },
-                    modifier = Modifier.padding(bottom = 6.dp)
-                )
-
-                // Bottom Action Row: Floating Like Button (with Heart-Burst) & 🎁 Gift Button
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 2.dp),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Floating Like Button with Heart-Burst Animation
-                    FloatingLikeButton(
-                        onLikeClicked = { viewModel.triggerFloatingHeart() },
-                        likeCount = stream.viewerCount * 3
-                    )
-
-                    Spacer(modifier = Modifier.width(10.dp))
-
-                    // 🎁 GIFTS BUTTON (75/25 Model Highlight)
-                    IconButton(
-                        onClick = { showGiftSheet = true },
-                        modifier = Modifier
-                            .size(50.dp)
-                            .clip(CircleShape)
-                            .background(
-                                Brush.linearGradient(listOf(VibeSecondaryPink, VibeAccentPurple, VibePrimaryNeon))
-                            )
-                            .testTag("open_gifts_sheet_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CardGiftcard,
-                            contentDescription = "Enviar Regalo",
-                            tint = Color.White,
-                            modifier = Modifier.size(26.dp)
-                        )
+                    onOpenGiftSheet = { showGiftSheet = true },
+                    onSendQuickRose = {
+                        val rose = availableGifts.find { it.name.contains("Rosa", ignoreCase = true) } ?: availableGifts.firstOrNull()
+                        if (rose != null) {
+                            viewModel.sendDynamicGift(rose, stream.streamerName)
+                        }
+                    },
+                    onShareClicked = {
+                        scope.launch {
+                            snackbarHostState.showSnackbar("Enlace del LIVE copiado al portapapeles")
+                        }
+                    },
+                    onMultiGuestClicked = {
+                        scope.launch {
+                            snackbarHostState.showSnackbar("Solicitud de conexión enviada al anfitrión")
+                        }
                     }
-                }
+                )
             }
 
             // Gift Bottom Sheet Modal
@@ -316,9 +307,10 @@ fun ViewerScreen(
                 GiftSendBottomSheet(
                     coinsBalance = coinsBalance,
                     streamerName = stream.streamerName,
+                    availableGifts = availableGifts,
                     onDismiss = { showGiftSheet = false },
                     onSendGift = { gift ->
-                        viewModel.sendGift(gift, stream.streamerName)
+                        viewModel.sendDynamicGift(gift, stream.streamerName)
                     },
                     onOpenCoinStore = {
                         showGiftSheet = false
