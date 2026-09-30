@@ -79,6 +79,7 @@ import com.example.viewmodel.VibeStreamViewModel
 
 sealed class AppDestination {
     object RegisterOnboarding : AppDestination()
+    object AgeVerification : AppDestination()
     object MainTabs : AppDestination()
     object BroadcasterStudio : AppDestination()
     data class ViewerLive(val stream: LiveStreamEntity) : AppDestination()
@@ -99,6 +100,7 @@ fun VibeStreamNav(
 
     var showCoinStoreDialog by remember { mutableStateOf(false) }
     var showWithdrawDialog by remember { mutableStateOf(false) }
+    var showUnderageLiveDialog by remember { mutableStateOf(false) }
 
     val wallet by viewModel.wallet.collectAsStateWithLifecycle()
     val transactions by viewModel.transactions.collectAsStateWithLifecycle()
@@ -108,11 +110,23 @@ fun VibeStreamNav(
     val coinsBalance = wallet?.coinsBalance ?: 0
     val earningsUsd = wallet?.creatorUsdBalance ?: 0.0
 
-    // If not registered yet, display RegisterScreen directly (GDPR compliant onboarding)
+    // 1. If not registered yet, display RegisterScreen directly (GDPR compliant onboarding)
     if (!consentRecord.isRegistered || currentDestination is AppDestination.RegisterOnboarding) {
         RegisterScreen(
             onRegisterSuccess = { email, username, termsVersion, timestamp ->
                 viewModel.registerUser(email, username, termsVersion, timestamp) {
+                    currentDestination = AppDestination.AgeVerification
+                }
+            }
+        )
+        return
+    }
+
+    // 2. If registered, but age verification has not been completed yet (obligatory before entering FeedScreen)
+    if (!consentRecord.isAgeVerified || currentDestination is AppDestination.AgeVerification) {
+        com.example.ui.screens.auth.AgeVerificationScreen(
+            onVerificationCompleted = { birthdate, age, canGoLive ->
+                viewModel.completeAgeVerification(birthdate, age, canGoLive) {
                     currentDestination = AppDestination.MainTabs
                 }
             }
@@ -139,6 +153,10 @@ fun VibeStreamNav(
         ) { dest ->
             when (dest) {
                 is AppDestination.RegisterOnboarding -> {
+                    // Handled above
+                }
+
+                is AppDestination.AgeVerification -> {
                     // Handled above
                 }
 
@@ -236,7 +254,11 @@ fun VibeStreamNav(
                                 onTabSelected = { tab ->
                                     if (tab == 2) {
                                         haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                                        currentDestination = AppDestination.BroadcasterStudio
+                                        if (!consentRecord.canGoLive) {
+                                            showUnderageLiveDialog = true
+                                        } else {
+                                            currentDestination = AppDestination.BroadcasterStudio
+                                        }
                                     } else {
                                         haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
                                         selectedTab = tab
@@ -286,7 +308,13 @@ fun VibeStreamNav(
                     com.example.ui.screens.creator.CreatorAnalyticsDashboardScreen(
                         viewModel = viewModel,
                         onBack = { currentDestination = AppDestination.MainTabs },
-                        onStartLive = { currentDestination = AppDestination.BroadcasterStudio }
+                        onStartLive = {
+                            if (!consentRecord.canGoLive) {
+                                showUnderageLiveDialog = true
+                            } else {
+                                currentDestination = AppDestination.BroadcasterStudio
+                            }
+                        }
                     )
                 }
 
@@ -326,6 +354,46 @@ fun VibeStreamNav(
                 onDismiss = { showWithdrawDialog = false },
                 onWithdrawSuccess = { amount, dest ->
                     viewModel.withdrawEarnings(amount, dest)
+                }
+            )
+        }
+
+        // Underage Live Streaming Restriction AlertDialog
+        if (showUnderageLiveDialog) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { showUnderageLiveDialog = false },
+                shape = RoundedCornerShape(22.dp),
+                containerColor = VibeSurface,
+                title = {
+                    Text(
+                        text = "Restricción de Transmisión",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
+                    )
+                },
+                text = {
+                    Text(
+                        text = "Debes tener al menos 18 años para transmitir en vivo. ¡Sigue disfrutando de los videos!",
+                        color = VibeTextSecondary,
+                        fontSize = 14.sp,
+                        lineHeight = 20.sp
+                    )
+                },
+                confirmButton = {
+                    androidx.compose.material3.Button(
+                        onClick = { showUnderageLiveDialog = false },
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = VibePrimaryNeon
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = "Entendido",
+                            color = Color.Black,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             )
         }

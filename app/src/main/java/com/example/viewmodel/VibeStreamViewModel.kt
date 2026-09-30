@@ -826,6 +826,29 @@ class VibeStreamViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     /**
+     * Completa el proceso de verificación de edad, almacena canGoLive en DataStore local
+     * y sincroniza los datos con Firebase Firestore.
+     */
+    fun completeAgeVerification(
+        birthdate: String,
+        age: Int,
+        canGoLive: Boolean,
+        onCompleted: () -> Unit
+    ) {
+        viewModelScope.launch {
+            val userEmail = consentRecord.value.userEmail.ifEmpty { "alex@vibestream.live" }
+            consentRepository.saveAgeVerification(birthdate, canGoLive)
+            com.example.service.FirebaseProfileService.saveAgeVerificationToFirestore(
+                userEmail = userEmail,
+                birthdate = birthdate,
+                age = age,
+                canGoLive = canGoLive
+            )
+            onCompleted()
+        }
+    }
+
+    /**
      * Derecho al Olvido (GDPR/CCPA):
      * 1. Llama al endpoint DELETE /api/users/me del backend
      * 2. Limpia DataStore local

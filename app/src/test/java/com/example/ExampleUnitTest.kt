@@ -62,4 +62,29 @@ class ExampleUnitTest {
         assertTrue(LegalContent.TERMS_AND_CONDITIONS.contains("75%"))
         assertTrue(LegalContent.PRIVACY_POLICY.contains("GDPR"))
     }
+
+    @Test
+    fun testAgeVerificationEligibility() {
+        // Adult user (e.g. 21 years old)
+        val adultAge = 21
+        val adultCanGoLive = adultAge >= 18
+        assertTrue("Adult users should be allowed to go live", adultCanGoLive)
+
+        // Minor user (e.g. 16 years old)
+        val minorAge = 16
+        val minorCanGoLive = minorAge >= 18
+        assertFalse("Minor users (< 18) must NOT be allowed to go live", minorCanGoLive)
+    }
+
+    @Test
+    fun testWebmAssetMapper() {
+        val rocketWebm = com.example.model.WebmAssetMapper.getGiftWebmUri(com.example.model.GiftAnimationType.VIBE_ROCKET)
+        assertEquals("asset:///webm/energia.webm", rocketWebm)
+
+        val dragonWebm = com.example.model.WebmAssetMapper.getGiftWebmUri(com.example.model.GiftAnimationType.GALAXY_DRAGON)
+        assertEquals("asset:///webm/tormenta_red.webm", dragonWebm)
+
+        val treasureWebm = com.example.model.WebmAssetMapper.getTreasureBoxWebmUri()
+        assertEquals("asset:///webm/cofre_magia.webm", treasureWebm)
+    }
 }

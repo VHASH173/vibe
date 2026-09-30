@@ -44,13 +44,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.airbnb.lottie.compose.LottieAnimation
-import com.airbnb.lottie.compose.LottieCompositionSpec
-import com.airbnb.lottie.compose.LottieConstants
-import com.airbnb.lottie.compose.animateLottieCompositionAsState
-import com.airbnb.lottie.compose.rememberLottieComposition
 import com.example.model.Gift
 import com.example.model.GiftAnimationType
+import com.example.model.WebmAssetMapper
 import com.example.ui.theme.VibeAccentPurple
 import com.example.ui.theme.VibeCommissionBlue
 import com.example.ui.theme.VibePrimaryNeon
@@ -81,15 +77,21 @@ fun GiftAnimationOverlay(
     val dragonProgress = remember { Animatable(0f) }
     val scaleAnim = remember { Animatable(0.2f) }
 
-    // Public Lottie fireworks/celebration animation spec with transparent background
-    val lottieUrl = "https://assets3.lottiefiles.com/packages/lf20_touohxv0.json"
-    val composition by rememberLottieComposition(LottieCompositionSpec.Url(lottieUrl))
-    val lottieProgress by animateLottieCompositionAsState(
-        composition = composition,
-        iterations = 1
-    )
+    // Mapeo automático de asset WebM transparente con canal alfa (ExoPlayer Media3)
+    val webmAssetUri = remember(gift.animationType) {
+        WebmAssetMapper.getGiftWebmUri(gift.animationType)
+    }
+
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
 
     LaunchedEffect(activeGift.timestamp) {
+        // Pre-cargar assets en pool para prevenir caídas de FPS
+        GiftEffectManager.prewarmAllAssets(context, scope)
+
+        // Disparo de vibración háptica sincronizada con el impacto visual del regalo premium
+        GiftEffectManager.triggerGiftHaptic(context, gift)
+
         scaleAnim.animateTo(
             targetValue = 1f,
             animationSpec = tween(400, easing = FastOutSlowInEasing)
@@ -114,14 +116,12 @@ fun GiftAnimationOverlay(
             .fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        // Full screen Lottie fireworks background layer (renders transparent over live video)
-        if (composition != null) {
-            LottieAnimation(
-                composition = composition,
-                progress = { lottieProgress },
-                modifier = Modifier.fillMaxSize()
-            )
-        }
+        // Capa de video WebM con canal alfa a pantalla completa (superpuesta sobre LiveKitVideoRenderer)
+        TransparentWebmPlayer(
+            assetUri = webmAssetUri,
+            onPlaybackEnded = onAnimationFinished,
+            modifier = Modifier.fillMaxSize()
+        )
 
         // Specific Gift Particle & Visual Effects
         when (gift.animationType) {

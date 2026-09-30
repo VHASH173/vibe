@@ -41,7 +41,7 @@ googleServices = "4.5.0"
 credentials = "1.5.0"
 googleid = "1.1.1"
 livekitAndroid = "2.10.0"
-lottie = "6.6.2"
+media3 = "1.5.1"
 
 
 [libraries]
@@ -97,7 +97,8 @@ androidx-credentials = { group = "androidx.credentials", name = "credentials", v
 androidx-credentials-play-services = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "credentials" }
 googleid = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleid" }
 livekit-android = { group = "io.livekit", name = "livekit-android", version.ref = "livekitAndroid" }
-lottie-compose = { group = "com.airbnb.android", name = "lottie-compose", version.ref = "lottie" }
+androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3" }
+androidx-media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3" }
 
 
 [plugins]

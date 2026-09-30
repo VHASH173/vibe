@@ -45,11 +45,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.airbnb.lottie.compose.LottieAnimation
-import com.airbnb.lottie.compose.LottieCompositionSpec
-import com.airbnb.lottie.compose.animateLottieCompositionAsState
-import com.airbnb.lottie.compose.rememberLottieComposition
 import com.example.model.GiftAnimationType
+import com.example.model.WebmAssetMapper
 import com.example.ui.theme.VibeAccentPurple
 import com.example.ui.theme.VibeOrangeHot
 import com.example.ui.theme.VibePrimaryNeon
@@ -68,35 +65,15 @@ fun AnimatedGiftOverlay(
 
     val gift = activeGift.gift
 
-    // Lottie JSON URL mapping for Premium Gifts (with fallback for offline/preview resilience)
-    val lottieUrl = remember(gift.animationType) {
-        when (gift.animationType) {
-            GiftAnimationType.VIBE_ROCKET -> "https://assets10.lottiefiles.com/packages/lf20_m64xbslf.json"
-            GiftAnimationType.GALAXY_DRAGON -> "https://assets9.lottiefiles.com/packages/lf20_w51pcehl.json"
-            GiftAnimationType.GOLDEN_CROWN -> "https://assets3.lottiefiles.com/packages/lf20_j1adxtyb.json"
-            else -> "https://assets2.lottiefiles.com/packages/lf20_u4yrau05.json"
-        }
+    // Mapeo automático de asset WebM transparente con canal alfa (ExoPlayer Media3)
+    val webmAssetUri = remember(gift.animationType) {
+        WebmAssetMapper.getGiftWebmUri(gift.animationType)
     }
-
-    val composition by rememberLottieComposition(LottieCompositionSpec.Url(lottieUrl))
-    val progress by animateLottieCompositionAsState(
-        composition = composition,
-        iterations = 1,
-        speed = 1.0f
-    )
 
     // Auto-dismiss after 4.2 seconds
     LaunchedEffect(activeGift.timestamp) {
         delay(4200)
         onAnimationFinished()
-    }
-
-    // Dismiss when Lottie completes if available
-    LaunchedEffect(progress) {
-        if (progress >= 0.99f && composition != null) {
-            delay(400)
-            onAnimationFinished()
-        }
     }
 
     val infiniteTransition = rememberInfiniteTransition(label = "gift_pulse")
@@ -113,6 +90,13 @@ fun AnimatedGiftOverlay(
             .testTag("animated_gift_overlay"),
         contentAlignment = Alignment.Center
     ) {
+        // Capa de video WebM con canal alfa a pantalla completa (superpuesta sobre LiveKitVideoRenderer)
+        TransparentWebmPlayer(
+            assetUri = webmAssetUri,
+            onPlaybackEnded = onAnimationFinished,
+            modifier = Modifier.fillMaxSize()
+        )
+
         // Transparent Overlay Canvas with Starburst particle aura
         Canvas(modifier = Modifier.fillMaxSize()) {
             val center = Offset(size.width / 2f, size.height * 0.45f)
@@ -131,27 +115,18 @@ fun AnimatedGiftOverlay(
             )
         }
 
-        // Lottie Animation Container covering screen with transparent background
+        // Animated Gift Persona / Icon Container
         Box(
             modifier = Modifier
                 .size(340.dp)
                 .scale(pulseScale),
             contentAlignment = Alignment.Center
         ) {
-            if (composition != null) {
-                LottieAnimation(
-                    composition = composition,
-                    progress = { progress },
-                    modifier = Modifier.fillMaxSize()
-                )
-            } else {
-                // High-impact graceful fallback with animated 3D emoji burst
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(text = gift.emoji, fontSize = 110.sp)
-                }
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(text = gift.emoji, fontSize = 110.sp)
             }
         }
 

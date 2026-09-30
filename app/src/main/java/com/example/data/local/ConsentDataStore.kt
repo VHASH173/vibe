@@ -20,7 +20,10 @@ data class LegalConsentRecord(
     val termsAcceptedTimestamp: Long,
     val privacyAccepted: Boolean,
     val userEmail: String,
-    val username: String
+    val username: String,
+    val birthdate: String = "",
+    val canGoLive: Boolean = true,
+    val isAgeVerified: Boolean = false
 )
 
 data class StreamerProfileData(
@@ -46,6 +49,9 @@ class ConsentRepository(private val context: Context) {
         val KEY_USER_EMAIL = stringPreferencesKey("user_email")
         val KEY_USERNAME = stringPreferencesKey("user_username")
         val KEY_THEME_MODE = stringPreferencesKey("app_theme_mode")
+        val KEY_BIRTHDATE = stringPreferencesKey("user_birthdate")
+        val KEY_CAN_GO_LIVE = booleanPreferencesKey("user_can_go_live")
+        val KEY_IS_AGE_VERIFIED = booleanPreferencesKey("is_age_verified")
         
         // Streamer Profile Preferences
         val KEY_DISPLAY_NAME = stringPreferencesKey("profile_display_name")
@@ -75,8 +81,19 @@ class ConsentRepository(private val context: Context) {
             termsAcceptedTimestamp = prefs[KEY_TERMS_TIMESTAMP] ?: 0L,
             privacyAccepted = prefs[KEY_PRIVACY_ACCEPTED] ?: false,
             userEmail = prefs[KEY_USER_EMAIL] ?: "",
-            username = prefs[KEY_USERNAME] ?: ""
+            username = prefs[KEY_USERNAME] ?: "",
+            birthdate = prefs[KEY_BIRTHDATE] ?: "",
+            canGoLive = prefs[KEY_CAN_GO_LIVE] ?: false,
+            isAgeVerified = prefs[KEY_IS_AGE_VERIFIED] ?: false
         )
+    }
+
+    suspend fun saveAgeVerification(birthdate: String, canGoLive: Boolean) {
+        context.consentDataStore.edit { prefs ->
+            prefs[KEY_BIRTHDATE] = birthdate
+            prefs[KEY_CAN_GO_LIVE] = canGoLive
+            prefs[KEY_IS_AGE_VERIFIED] = true
+        }
     }
 
     val streamerProfileFlow: Flow<StreamerProfileData> = context.consentDataStore.data.map { prefs ->
